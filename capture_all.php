@@ -1,9 +1,103 @@
 #!/usr/bin/env php
 <?php
 
+// Function to get a consistent emoji for a MAC address based on manufacturer
+function getEmojiForMac($mac, $manufacturer) {
+    $manufacturer = strtolower($manufacturer);
+    
+    // Themed emoji sets for specific manufacturers
+    $themedEmojis = [
+        // Apple devices
+        'apple' => ['🍎', '🍏', '📱', '💻', '⌚', '🎧', '🖥️', '⌨️', '🖱️', '🔌'],
+        
+        // Car brands
+        'tesla' => ['🚗', '⚡', '🔋', '🏎️', '🚙', '🔌', '💡', '🌟'],
+        'bmw' => ['🚗', '🏎️', '🚙', '🚕', '🏁', '⚙️', '🔧'],
+        'mercedes' => ['🚗', '🏎️', '🚙', '⭐', '👑', '💎'],
+        'audi' => ['🚗', '🏎️', '🚙', '⭕', '🔵', '⚪'],
+        'volkswagen' => ['🚗', '🚙', '🚐', '🚎', '🔵'],
+        'ford' => ['🚗', '🚙', '🚓', '🚚', '🛻'],
+        'toyota' => ['🚗', '🚙', '🚕', '🔴', '⭕'],
+        'honda' => ['🚗', '🚙', '🏍️', '🛵', '🔴'],
+        'nissan' => ['🚗', '🚙', '⚫', '🔴', '⚪'],
+        'chevrolet' => ['🚗', '🚙', '🏁', '⭐', '🔵'],
+        'gm' => ['🚗', '🚙', '🚓', '🚐'],
+        'chrysler' => ['🚗', '🚙', '⭐', '🔵'],
+        'jeep' => ['🚙', '⛰️', '🏕️', '🌲', '🗻'],
+        'volvo' => ['🚗', '🚙', '🔵', '⚪', '🛡️'],
+        'porsche' => ['🏎️', '🐎', '⚡', '🏁', '👑'],
+        
+        // Phone/Tech brands
+        'samsung' => ['📱', '💻', '📺', '⌚', '🎧', '📷', '🔵', '⚪', '⚫'],
+        'google' => ['🔵', '🔴', '🟡', '🟢', '🔍', '📱', '💻'],
+        'microsoft' => ['💻', '🖥️', '⌨️', '🖱️', '🪟', '🔵', '🟢', '🔴', '🟡'],
+        'dell' => ['💻', '🖥️', '⌨️', '🔵', '⚪'],
+        'hp' => ['💻', '🖥️', '🖨️', '🔵', '⚪'],
+        'lenovo' => ['💻', '🖥️', '🔴', '⚫'],
+        'asus' => ['💻', '🖥️', '🎮', '⚡', '🔵'],
+        'sony' => ['📺', '🎮', '🎧', '📷', '🎬', '🔵', '⚫', '⚪'],
+        'lg' => ['📺', '📱', '🔴', '⚪', '⚫'],
+        'huawei' => ['📱', '💻', '🔴', '⚫', '🌸'],
+        'xiaomi' => ['📱', '💻', '🟠', '⚫', '⚪'],
+        'motorola' => ['📱', '📻', '📡', '🔵', '⚪'],
+        'nokia' => ['📱', '🔵', '⚪', '📟'],
+        
+        // Network equipment
+        'cisco' => ['🌐', '📡', '🔵', '⚪', '🔌', '💻'],
+        'netgear' => ['📡', '🌐', '🔵', '⚪', '🔌'],
+        'tp-link' => ['📡', '🌐', '🟢', '🔵', '⚪'],
+        'linksys' => ['📡', '🌐', '🔵', '⚪'],
+        'ubiquiti' => ['📡', '🌐', '🔵', '⚪', '☁️'],
+        'd-link' => ['📡', '🌐', '🟢', '⚫'],
+        'asus' => ['📡', '🎮', '💻', '🔵'],
+        
+        // IoT/Smart devices
+        'amazon' => ['📦', '🟠', '🔵', '🎤', '📱', '💡'],
+        'sonos' => ['🔊', '🎵', '🎶', '⚫', '⚪'],
+        'philips' => ['💡', '🔵', '🟢', '🟡', '🔴', '🟣'],
+        'nest' => ['🏠', '🌡️', '📹', '🔵', '🟢'],
+        'ring' => ['🔔', '📹', '🔵', '⚫'],
+        'bose' => ['🔊', '🎧', '🎵', '⚫'],
+    ];
+    
+    // Check if manufacturer matches any themed set
+    foreach ($themedEmojis as $brand => $emojis) {
+        if (strpos($manufacturer, $brand) !== false) {
+            $hash = crc32($mac);
+            $index = abs($hash) % count($emojis);
+            return $emojis[$index];
+        }
+    }
+    
+    // Default emoji set for unknown manufacturers
+    $defaultEmojis = ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪', '🔺', 
+                      '🔻', '🔶', '🔷', '🔸', '🔹', '💠', '🌟', '⭐', '✨', '💫',
+                      '🎯', '🎨', '🎭', '🎪', '🎬', '🎮', '🎰', '🎲', '🧩', '🎸',
+                      '🎹', '🎺', '🎻', '🎤', '🎧', '📱', '💻', '⌚', '📡', '🔌',
+                      '💡', '🔦', '🏮', '📻', '📺', '📷', '📹', '🎥', '☎️', '📞',
+                      '🚀', '🛸', '🚂', '🚆', '⛵', '🚤', '⚓', '🎢', '🎡', '🎠'];
+    
+    $hash = crc32($mac);
+    $index = abs($hash) % count($defaultEmojis);
+    return $defaultEmojis[$index];
+}
+
 echo "Capturing all WiFi communication...\n\n";
 
-$fp = popen("tshark -l -i wlan0mon -T fields -e wlan.sa_resolved -e wlan.sa -e wlan.bssid_resolved -e wlan.bssid -e wlan.ssid -e radiotap.dbm_antsignal 2>/dev/null", 'r');
+// Build tshark command with parameters
+$cmd = "tshark " .
+    "-l " .                                          // Line buffered output (live streaming)
+    "-i wlan0mon " .                                 // Interface to capture on (monitor mode)
+    "-T fields " .                                   // Output format: fields (tab-separated values)
+    "-e wlan.sa_resolved " .                         // Field: Source address manufacturer name
+    "-e wlan.sa " .                                  // Field: Source MAC address
+    "-e wlan.bssid_resolved " .                      // Field: BSSID manufacturer name
+    "-e wlan.bssid " .                               // Field: BSSID MAC address
+    "-e wlan.ssid " .                                // Field: SSID (network name)
+    "-e radiotap.dbm_antsignal " .                   // Field: Signal strength in dBm
+    "2>/dev/null";                                   // Suppress error messages
+
+$fp = popen($cmd, 'r');
 
 while (!feof($fp)) {
     $line = fgets($fp);
@@ -32,7 +126,8 @@ while (!feof($fp)) {
     }
     
     if ($f[1]) {
-        printf("%s → %-20s %s\n", $source, $ssid, $rssi);
+        $emoji = getEmojiForMac($f[1], $source);
+        printf("%s %s → %-20s %s\n", $emoji, $source, $ssid, $rssi);
     }
 }
 
