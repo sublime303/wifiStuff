@@ -32,16 +32,19 @@ while (!feof($fp)) {
     
     // Decode SSID from hex if needed
     $ssidRaw = $f[4];
-    if ($ssidRaw && ctype_xdigit(str_replace(':', '', $ssidRaw))) {
+    
+    // Check for tshark's <MISSING> placeholder or empty value
+    if (empty($ssidRaw) || $ssidRaw === '<MISSING>') {
+        $ssid = "(broadcast)";
+    } elseif (ctype_xdigit(str_replace(':', '', $ssidRaw))) {
         // It's hex, decode it
         $ssid = hex2bin(str_replace(':', '', $ssidRaw));
+        // If decoded to empty, it's broadcast
+        if (empty($ssid)) {
+            $ssid = "(broadcast)";
+        }
     } else {
-        $ssid = $ssidRaw ?: "";
-    }
-    
-    // Replace empty SSID with broadcast indicator
-    if (empty($ssid)) {
-        $ssid = "(broadcast)";
+        $ssid = $ssidRaw;
     }
     
     // Get best (strongest/least negative) RSSI value
