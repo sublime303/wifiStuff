@@ -3,7 +3,7 @@
 
 // Include shared configurations
 require_once __DIR__ . '/emoji_config.php';
-require_once __DIR__ . '/interface_config.php';  // Provides: $interface, $onlyUniquePairs, $showDots
+require_once __DIR__ . '/interface_config.php';  // Provides: $interface, $onlyUniquePairs, $verbose
 require_once __DIR__ . '/database_config.php';
 
 $seenPairs = [];
@@ -26,11 +26,13 @@ echo "Capturing probe requests on interface: $interface\n";
 if ($dbEnabled) {
     echo "Logging to database: wifi_captures.db\n";
 }
-if ($onlyUniquePairs) {
-    echo "Mode: Only showing UNIQUE device+SSID pairs\n";
+if (!$onlyUniquePairs) {
+    echo "Mode: Showing ALL captures (use default for unique pairs only)\n";
+} else {
+    echo "Mode: Showing UNIQUE device+SSID pairs only (use --all to show everything)\n";
 }
-if ($showDots) {
-    echo "Activity dots: ENABLED\n";
+if ($verbose) {
+    echo "Verbose mode: Activity indicators ENABLED\n";
 }
 echo "\n";
 
@@ -49,6 +51,8 @@ $cmd = "tshark " .
     "2>/dev/null";                                   // Suppress error messages
 
 $fp = popen($cmd, 'r');
+$packetCount = 0;
+$dotsPrinted = false;
 
 while (!feof($fp)) {
     $line = fgets($fp);
@@ -56,6 +60,8 @@ while (!feof($fp)) {
     
     $f = explode("\t", trim($line));
     if (count($f) < 2) continue;
+    
+    $packetCount++;
     
     $source = $f[0] ?: $f[1];
     
@@ -84,9 +90,10 @@ while (!feof($fp)) {
         $rssi = $bestRssi." dB";
     }
     
-    // Show activity dot for all packets (if enabled)
-    if ($showDots) {
+    // Show activity dot every 100 packets (if verbose enabled)
+    if ($verbose && $packetCount % 100 === 0) {
         echo ".";
+        $dotsPrinted = true;
     }
     
     if ($f[1]) {
@@ -113,13 +120,14 @@ while (!feof($fp)) {
         $macEmoji = getEmojiForMac($f[1], $source);
         $ssidEmoji = getEmojiForSSID($ssid);
         
-        // Add newline before output if dots are shown
-        if ($showDots) {
+        // Add newline before output if dots were printed
+        if ($dotsPrinted) {
             echo "\n";
+            $dotsPrinted = false;
         }
         
         if ($isUniquePair && $onlyUniquePairs) {
-            printf("✨ %s%s %s → %-20s %s (NEW PAIR!)\n", $macEmoji, $ssidEmoji, $source, $ssid, $rssi);
+            printf("%s%s %s → %-20s %s (NEW!)\n", $macEmoji, $ssidEmoji, $source, $ssid, $rssi);
         } else {
             printf("%s%s %s → %-20s %s\n", $macEmoji, $ssidEmoji, $source, $ssid, $rssi);
         }
