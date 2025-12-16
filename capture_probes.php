@@ -1,86 +1,8 @@
 #!/usr/bin/env php
 <?php
 
-// Function to get a consistent emoji for a MAC address based on manufacturer
-function getEmojiForMac($mac, $manufacturer) {
-    $manufacturer = strtolower($manufacturer);
-    
-    // Themed emoji sets for specific manufacturers
-    $themedEmojis = [
-        // Apple devices
-        'apple' => ['🍎', '🍏', '📱', '💻', '⌚', '🎧', '🖥️', '⌨️', '🖱️', '🔌'],
-        
-        // Car brands
-        'tesla' => ['🚗', '⚡', '🔋', '🏎️', '🚙', '🔌', '💡', '🌟'],
-        'bmw' => ['🚗', '🏎️', '🚙', '🚕', '🏁', '⚙️', '🔧'],
-        'mercedes' => ['🚗', '🏎️', '🚙', '⭐', '👑', '💎'],
-        'audi' => ['🚗', '🏎️', '🚙', '⭕', '🔵', '⚪'],
-        'volkswagen' => ['🚗', '🚙', '🚐', '🚎', '🔵'],
-        'ford' => ['🚗', '🚙', '🚓', '🚚', '🛻'],
-        'toyota' => ['🚗', '🚙', '🚕', '🔴', '⭕'],
-        'honda' => ['🚗', '🚙', '🏍️', '🛵', '🔴'],
-        'nissan' => ['🚗', '🚙', '⚫', '🔴', '⚪'],
-        'chevrolet' => ['🚗', '🚙', '🏁', '⭐', '🔵'],
-        'gm' => ['🚗', '🚙', '🚓', '🚐'],
-        'chrysler' => ['🚗', '🚙', '⭐', '🔵'],
-        'jeep' => ['🚙', '⛰️', '🏕️', '🌲', '🗻'],
-        'volvo' => ['🚗', '🚙', '🔵', '⚪', '🛡️'],
-        'porsche' => ['🏎️', '🐎', '⚡', '🏁', '👑'],
-        
-        // Phone/Tech brands
-        'samsung' => ['📱', '💻', '📺', '⌚', '🎧', '📷', '🔵', '⚪', '⚫'],
-        'google' => ['🔵', '🔴', '🟡', '🟢', '🔍', '📱', '💻'],
-        'microsoft' => ['💻', '🖥️', '⌨️', '🖱️', '🪟', '🔵', '🟢', '🔴', '🟡'],
-        'dell' => ['💻', '🖥️', '⌨️', '🔵', '⚪'],
-        'hp' => ['💻', '🖥️', '🖨️', '🔵', '⚪'],
-        'lenovo' => ['💻', '🖥️', '🔴', '⚫'],
-        'asus' => ['💻', '🖥️', '🎮', '⚡', '🔵'],
-        'sony' => ['📺', '🎮', '🎧', '📷', '🎬', '🔵', '⚫', '⚪'],
-        'lg' => ['📺', '📱', '🔴', '⚪', '⚫'],
-        'huawei' => ['📱', '💻', '🔴', '⚫', '🌸'],
-        'xiaomi' => ['📱', '💻', '🟠', '⚫', '⚪'],
-        'motorola' => ['📱', '📻', '📡', '🔵', '⚪'],
-        'nokia' => ['📱', '🔵', '⚪', '📟'],
-        
-        // Network equipment
-        'cisco' => ['🌐', '📡', '🔵', '⚪', '🔌', '💻'],
-        'netgear' => ['📡', '🌐', '🔵', '⚪', '🔌'],
-        'tp-link' => ['📡', '🌐', '🟢', '🔵', '⚪'],
-        'linksys' => ['📡', '🌐', '🔵', '⚪'],
-        'ubiquiti' => ['📡', '🌐', '🔵', '⚪', '☁️'],
-        'd-link' => ['📡', '🌐', '🟢', '⚫'],
-        'asus' => ['📡', '🎮', '💻', '🔵'],
-        
-        // IoT/Smart devices
-        'amazon' => ['📦', '🟠', '🔵', '🎤', '📱', '💡'],
-        'sonos' => ['🔊', '🎵', '🎶', '⚫', '⚪'],
-        'philips' => ['💡', '🔵', '🟢', '🟡', '🔴', '🟣'],
-        'nest' => ['🏠', '🌡️', '📹', '🔵', '🟢'],
-        'ring' => ['🔔', '📹', '🔵', '⚫'],
-        'bose' => ['🔊', '🎧', '🎵', '⚫'],
-    ];
-    
-    // Check if manufacturer matches any themed set
-    foreach ($themedEmojis as $brand => $emojis) {
-        if (strpos($manufacturer, $brand) !== false) {
-            $hash = crc32($mac);
-            $index = abs($hash) % count($emojis);
-            return $emojis[$index];
-        }
-    }
-    
-    // Default emoji set for unknown manufacturers
-    $defaultEmojis = ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🟤', '⚫', '⚪', '🔺', 
-                      '🔻', '🔶', '🔷', '🔸', '🔹', '💠', '🌟', '⭐', '✨', '💫',
-                      '🎯', '🎨', '🎭', '🎪', '🎬', '🎮', '🎰', '🎲', '🧩', '🎸',
-                      '🎹', '🎺', '🎻', '🎤', '🎧', '📱', '💻', '⌚', '📡', '🔌',
-                      '💡', '🔦', '🏮', '📻', '📺', '📷', '📹', '🎥', '☎️', '📞',
-                      '🚀', '🛸', '🚂', '🚆', '⛵', '🚤', '⚓', '🎢', '🎡', '🎠'];
-    
-    $hash = crc32($mac);
-    $index = abs($hash) % count($defaultEmojis);
-    return $defaultEmojis[$index];
-}
+// Include shared emoji configuration
+require_once __DIR__ . '/emoji_config.php';
 
 echo "Capturing probe requests...\n\n";
 
@@ -118,6 +40,11 @@ while (!feof($fp)) {
         $ssid = $ssidRaw ?: "";
     }
     
+    // Replace empty SSID with broadcast indicator
+    if (empty($ssid)) {
+        $ssid = "(broadcast)";
+    }
+    
     // Get best (strongest/least negative) RSSI value
     $rssi = "";
     if ($f[5]) {
@@ -127,8 +54,9 @@ while (!feof($fp)) {
     }
     
     if ($f[1]) {
-        $emoji = getEmojiForMac($f[1], $source);
-        printf("%s %s → %-20s %s\n", $emoji, $source, $ssid, $rssi);
+        $macEmoji = getEmojiForMac($f[1], $source);
+        $ssidEmoji = getEmojiForSSID($ssid);
+        printf("%s%s %s → %-20s %s\n", $macEmoji, $ssidEmoji, $source, $ssid, $rssi);
     }
 }
 
