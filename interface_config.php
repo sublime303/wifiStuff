@@ -3,12 +3,34 @@
  * Interface Configuration for WiFi Capture Scripts
  * 
  * Handles interface selection from command line or defaults to wlan0mon
+ * Also parses command-line flags
  * 
  * Used by: capture_probes.php, capture_all.php
  */
 
+// Parse command-line flags
+$onlyUniquePairs = false;
+$showDots = false;
+
+foreach ($argv as $arg) {
+    if ($arg === '--unique' || $arg === '-u') {
+        $onlyUniquePairs = true;
+    }
+    if ($arg === '--dots' || $arg === '-d') {
+        $showDots = true;
+    }
+}
+
 // Get interface from command line or default to wlan0mon
-$interface = $argv[1] ?? null;
+// Filter out flags starting with --
+$interfaceArg = null;
+foreach ($argv as $arg) {
+    if ($arg !== $argv[0] && !str_starts_with($arg, '-')) {
+        $interfaceArg = $arg;
+        break;
+    }
+}
+$interface = $interfaceArg;
 
 if (!$interface) {
     // Check if wlan0mon exists

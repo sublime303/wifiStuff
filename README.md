@@ -30,13 +30,25 @@ sudo ./capture_all.php
 
 # Use specific interface
 sudo ./capture_probes.php wlan1
+
+# Only show UNIQUE device+SSID pairs (discovery mode)
+sudo ./capture_probes.php --unique
+sudo ./capture_probes.php wlan1 --unique
+
+# Show activity dots (useful with --unique to see background activity)
+sudo ./capture_probes.php --dots
+sudo ./capture_probes.php --unique --dots
 ```
 
 ## Scripts
 
 ### Capture Scripts
 - **`capture_probes.php`** - Capture WiFi probe requests only
+  - Supports `--unique` or `-u` flag to only show unique device+SSID pairs
+  - Supports `--dots` or `-d` flag to show activity indicators for all packets
 - **`capture_all.php`** - Capture all WiFi communication
+  - Supports `--unique` or `-u` flag to only show unique device+SSID pairs
+  - Supports `--dots` or `-d` flag to show activity indicators for all packets
 
 ### Database Tools
 - **`view_db.php`** - Query and view captured data
@@ -59,12 +71,30 @@ sudo ./capture_probes.php wlan1
 
 ## Example Output
 
+**Normal mode:**
 ```
 🍎🏒 Apple_8a:78:ef → snapStop             -79 dB
 📱📡 Samsung_32:56:ab → (broadcast)         -45 dB
 🚗⚡ Tesla_be:34:de → FastFiber5G          -65 dB
 💻🏠 Dell_a1:12:cd → HomeNetwork           -70 dB
 ```
+
+**Unique pairs mode (`--unique`):**
+```
+✨ 🍎🏒 Apple_8a:78:ef → snapStop             -79 dB (NEW PAIR!)
+✨ 🍎🏠 Apple_8a:78:ef → HomeNetwork          -65 dB (NEW PAIR!)
+✨ 🚗⚡ Tesla_be:34:de → FastFiber5G          -65 dB (NEW PAIR!)
+```
+(Only shows unique device+SSID combinations never seen before)
+
+**With activity dots (`--dots`):**
+```
+..........
+✨ 🍎🏒 Apple_8a:78:ef → snapStop             -79 dB (NEW PAIR!)
+....................
+✨ 🍎🏠 Apple_8a:78:ef → HomeNetwork          -65 dB (NEW PAIR!)
+```
+(Shows `.` for each packet, useful in `--unique` mode to see background activity)
 
 ## Customization
 
@@ -133,6 +163,9 @@ iw dev wlan0 info
 - Database logging is optional - scripts work without it
 - Use `Ctrl+C` to stop capture gracefully
 - SSID keywords are case-insensitive
+- Use `--unique` flag to discover unique device+network relationships
+- In unique mode: only logs/displays new device+SSID pairs (great for wardriving!)
+- With database: remembers pairs from previous sessions; without: tracks current session only
 
 ## File Structure
 

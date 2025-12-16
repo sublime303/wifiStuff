@@ -3,12 +3,34 @@
 
 // Include shared configurations
 require_once __DIR__ . '/emoji_config.php';
-require_once __DIR__ . '/interface_config.php';
+require_once __DIR__ . '/interface_config.php';  // Provides: $interface, $onlyUniquePairs, $showDots
 require_once __DIR__ . '/database_config.php';
+
+$seenPairs = [];
+
+// Load previously seen device+SSID pairs from database if available
+if ($onlyUniquePairs && $dbEnabled && $db) {
+    try {
+        $stmt = $db->query("SELECT DISTINCT mac_address, ssid FROM captures WHERE ssid IS NOT NULL AND ssid != '(broadcast)'");
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $key = $row['mac_address'] . '|' . $row['ssid'];
+            $seenPairs[$key] = true;
+        }
+        echo "Loaded " . count($seenPairs) . " previously seen device+SSID pairs from database\n";
+    } catch (PDOException $e) {
+        // Silently continue
+    }
+}
 
 echo "Capturing probe requests on interface: $interface\n";
 if ($dbEnabled) {
     echo "Logging to database: wifi_captures.db\n";
+}
+if ($onlyUniquePairs) {
+    echo "Mode: Only showing UNIQUE device+SSID pairs\n";
+}
+if ($showDots) {
+    echo "Activity dots: ENABLED\n";
 }
 echo "\n";
 
@@ -38,7 +60,7 @@ while (!feof($fp)) {
     $source = $f[0] ?: $f[1];
     
     // Decode SSID from hex if needed
-    $ssidRaw = $f[4];
+    $ssidRaw = $f[4] ?? '';
     
     // Check for tshark's <MISSING> placeholder or empty value
     if (empty($ssidRaw) || $ssidRaw === '<MISSING>') {
@@ -56,19 +78,54 @@ while (!feof($fp)) {
     
     // Get best (strongest/least negative) RSSI value
     $rssi = "";
-    if ($f[5]) {
+    if (isset($f[5]) && $f[5]) {
         $rssiValues = array_map('intval', explode(',', $f[5]));
         $bestRssi = max($rssiValues); // max because -45 > -80
         $rssi = $bestRssi." dB";
     }
     
+    // Show activity dot for all packets (if enabled)
+    if ($showDots) {
+        echo ".";
+    }
+    
     if ($f[1]) {
+        // Check if this device+SSID pair is unique
+        $isUniquePair = false;
+        if ($ssid && $ssid !== '(broadcast)') {
+            $pairKey = $f[1] . '|' . $ssid;
+            if (!isset($seenPairs[$pairKey])) {
+                $isUniquePair = true;
+                $seenPairs[$pairKey] = true;
+            }
+        }
+        
+        // In unique mode: still update device stats even if pair isn't unique
+        if ($onlyUniquePairs && !$isUniquePair) {
+            // Update device summary (packet count, last seen) but don't log capture
+            if ($dbEnabled && $db) {
+                updateDeviceSummary($db, $f[1], $source, $ssid);
+            }
+            continue;
+        }
+        
+        // Display the capture
         $macEmoji = getEmojiForMac($f[1], $source);
         $ssidEmoji = getEmojiForSSID($ssid);
-        printf("%s%s %s → %-20s %s\n", $macEmoji, $ssidEmoji, $source, $ssid, $rssi);
         
-        // Log to database
-        $signalValue = $f[5] ? max(array_map('intval', explode(',', $f[5]))) : null;
+        // Add newline before output if dots are shown
+        if ($showDots) {
+            echo "\n";
+        }
+        
+        if ($isUniquePair && $onlyUniquePairs) {
+            printf("✨ %s%s %s → %-20s %s (NEW PAIR!)\n", $macEmoji, $ssidEmoji, $source, $ssid, $rssi);
+        } else {
+            printf("%s%s %s → %-20s %s\n", $macEmoji, $ssidEmoji, $source, $ssid, $rssi);
+        }
+        
+        // Log to database (only logs if displayed)
+        $signalValue = isset($f[5]) && $f[5] ? max(array_map('intval', explode(',', $f[5]))) : null;
         logCapture($db, $f[1], $source, $ssid, $f[3] ?? null, $f[2] ?? null, $signalValue, $interface, 'probe_request');
     }
 }
