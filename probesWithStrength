@@ -1,1 +1,0 @@
-sudo tshark -I -i wlan0mon  subtype probereq

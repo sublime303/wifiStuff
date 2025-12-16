@@ -1,15 +1,16 @@
 #!/usr/bin/env php
 <?php
 
-// Include shared emoji configuration
+// Include shared configurations
 require_once __DIR__ . '/emoji_config.php';
+require_once __DIR__ . '/interface_config.php';
 
-echo "Capturing all WiFi communication...\n\n";
+echo "Capturing all WiFi communication on interface: $interface\n\n";
 
 // Build tshark command with parameters
 $cmd = "tshark " .
     "-l " .                                          // Line buffered output (live streaming)
-    "-i wlan0mon " .                                 // Interface to capture on (monitor mode)
+    "-i $interface " .                               // Interface to capture on (monitor mode)
     "-T fields " .                                   // Output format: fields (tab-separated values)
     "-e wlan.sa_resolved " .                         // Field: Source address manufacturer name
     "-e wlan.sa " .                                  // Field: Source MAC address

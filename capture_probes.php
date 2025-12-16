@@ -1,15 +1,16 @@
 #!/usr/bin/env php
 <?php
 
-// Include shared emoji configuration
+// Include shared configurations
 require_once __DIR__ . '/emoji_config.php';
+require_once __DIR__ . '/interface_config.php';
 
-echo "Capturing probe requests...\n\n";
+echo "Capturing probe requests on interface: $interface\n\n";
 
 // Build tshark command with parameters
 $cmd = "tshark " .
     "-l " .                                          // Line buffered output (live streaming)
-    "-i wlan0mon " .                                 // Interface to capture on (monitor mode)
+    "-i $interface " .                               // Interface to capture on (monitor mode)
     "-Y 'wlan.fc.type_subtype == 0x04' " .          // Display filter: only probe requests (0x04)
     "-T fields " .                                   // Output format: fields (tab-separated values)
     "-e wlan.sa_resolved " .                         // Field: Source address manufacturer name
