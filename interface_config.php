@@ -9,15 +9,15 @@
  */
 
 // Parse command-line flags
-$onlyUniquePairs = false;
-$showDots = false;
+$onlyUniquePairs = true;  // Default: only show unique device+SSID pairs
+$verbose = false;
 
 foreach ($argv as $arg) {
-    if ($arg === '--unique' || $arg === '-u') {
-        $onlyUniquePairs = true;
+    if ($arg === '--all' || $arg === '-a') {
+        $onlyUniquePairs = false;  // Show all captures
     }
-    if ($arg === '--dots' || $arg === '-d') {
-        $showDots = true;
+    if ($arg === '--verbose' || $arg === '-v') {
+        $verbose = true;
     }
 }
 

@@ -4,6 +4,7 @@ wifi_captures_backup.db
 wifi_captures.db-journal
 wifi_captures.db-wal
 wifi_captures.db-shm
+*.db
 
 # Backup files
 *.bak
