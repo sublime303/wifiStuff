@@ -1,0 +1,10 @@
+# SQLite database files
+wifi_captures.db
+wifi_captures.db-journal
+wifi_captures.db-wal
+wifi_captures.db-shm
+
+# Backup files
+*.bak
+*.backup
+

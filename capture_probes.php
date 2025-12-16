@@ -4,8 +4,13 @@
 // Include shared configurations
 require_once __DIR__ . '/emoji_config.php';
 require_once __DIR__ . '/interface_config.php';
+require_once __DIR__ . '/database_config.php';
 
-echo "Capturing probe requests on interface: $interface\n\n";
+echo "Capturing probe requests on interface: $interface\n";
+if ($dbEnabled) {
+    echo "Logging to database: wifi_captures.db\n";
+}
+echo "\n";
 
 // Build tshark command with parameters
 $cmd = "tshark " .
@@ -61,6 +66,10 @@ while (!feof($fp)) {
         $macEmoji = getEmojiForMac($f[1], $source);
         $ssidEmoji = getEmojiForSSID($ssid);
         printf("%s%s %s → %-20s %s\n", $macEmoji, $ssidEmoji, $source, $ssid, $rssi);
+        
+        // Log to database
+        $signalValue = $f[5] ? max(array_map('intval', explode(',', $f[5]))) : null;
+        logCapture($db, $f[1], $source, $ssid, $f[3] ?? null, $f[2] ?? null, $signalValue, $interface, 'probe_request');
     }
 }
 
