@@ -24,9 +24,11 @@ function getEmojiForSSID($ssid) {
     
     // Theme-based SSID emojis
     $themes = [
-        // known custom SSIDs
+        // known custom SSIDs (use lowercase)
         ['keywords' => ['slapshot'], 'emojis' => ['🏒']],
         ['keywords' => ['quist'], 'emojis' => ['🌿']], 
+        ['keywords' => ['defaultssid'], 'emojis' => ['🚫']],
+        ['keywords' => ['tele2'], 'emojis' => ['📶','🔗']],
 
         // Home/Family related
         ['keywords' => ['home', 'house', 'family', 'familia'], 'emojis' => ['🏠', '🏡', '👨‍👩‍👧‍👦', '👪', '🏘️']],
