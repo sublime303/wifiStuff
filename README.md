@@ -1,4 +1,4 @@
-# WiFi Capture Scripts
+# WiFi Scanner Scripts
 
 Beautiful, colorful WiFi packet capture tools with emoji identifiers and SQLite logging.
 
@@ -181,6 +181,11 @@ wifiStuff/
 ├── wifi_captures.db        # SQLite database (auto-created)
 └── README.md               # This file
 ```
+
+
+# TODO: 
+- add bluetooth scanning too
+
 
 ## License
 
