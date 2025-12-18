@@ -210,6 +210,38 @@
             z-index: 200;
             max-width: 300px;
             backdrop-filter: blur(10px);
+            transition: border 0.2s;
+        }
+        
+        #tooltip.sticky {
+            border: 2px solid #4fc3f7;
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.5);
+            pointer-events: auto;
+        }
+        
+        .tooltip-close {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            padding: 0;
+            display: none;
+        }
+        
+        #tooltip.sticky .tooltip-close {
+            display: block;
+        }
+        
+        .tooltip-close:hover {
+            background: #ff6666;
         }
         
         .legend {
@@ -270,6 +302,7 @@
         <p>🖱️ Right click + drag to pan</p>
         <p>🖱️ Scroll to zoom</p>
         <p>🖱️ Hover over objects for details</p>
+        <p>🖱️ Click on object to pin tooltip</p>
     </div>
     
     <div id="stats">
@@ -332,6 +365,8 @@
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
         let tooltip = document.getElementById('tooltip');
+        let stickyTooltip = false;
+        let stickyObject = null;
         
         // Initialize the 3D scene
         function init() {
@@ -377,6 +412,7 @@
             // Event listeners
             window.addEventListener('resize', onWindowResize);
             window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('click', onMouseClick);
             
             // Start animation
             animate();
@@ -738,6 +774,9 @@
         }
         
         function onMouseMove(event) {
+            // Don't update tooltip if it's sticky
+            if (stickyTooltip) return;
+            
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             
@@ -753,18 +792,53 @@
             
             if (intersects.length > 0) {
                 const object = intersects[0].object;
-                showTooltip(event, object);
+                showTooltip(event, object, false);
             } else {
                 hideTooltip();
             }
         }
         
-        function showTooltip(event, object) {
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Raycast to find intersected objects
+            raycaster.setFromCamera(mouse, camera);
+            
+            const allObjects = [
+                ...Array.from(accessPoints.values()),
+                ...Array.from(clients.values())
+            ];
+            
+            const intersects = raycaster.intersectObjects(allObjects, false);
+            
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                
+                // If clicking the same object, unstick it
+                if (stickyTooltip && stickyObject === object) {
+                    unstickTooltip();
+                } else {
+                    // Stick the tooltip to this object
+                    showTooltip(event, object, true);
+                }
+            } else {
+                // Clicked empty space, unstick tooltip
+                unstickTooltip();
+            }
+        }
+        
+        function showTooltip(event, object, sticky = false) {
             const userData = object.userData;
             let content = '';
             
+            // Add close button if sticky
+            if (sticky) {
+                content = '<button class="tooltip-close" onclick="unstickTooltip()">×</button>';
+            }
+            
             if (userData.type === 'accessPoint') {
-                content = `
+                content += `
                     <strong>📡 Access Point</strong><br>
                     SSID: ${userData.ssid || 'Hidden'}<br>
                     BSSID: ${userData.bssid || 'Unknown'}
@@ -789,7 +863,7 @@
                     }
                 }
             } else if (userData.type === 'client') {
-                content = `
+                content += `
                     <strong>📱 Client Device</strong><br>
                     MAC: ${userData.mac}<br>
                     Manufacturer: ${userData.manufacturer || 'Unknown'}<br>
@@ -804,13 +878,34 @@
                 }
             }
             
+            if (sticky) {
+                content += '<br><small style="color: #4fc3f7;">📌 Tooltip pinned - Click to unpin</small>';
+            }
+            
             tooltip.innerHTML = content;
             tooltip.style.display = 'block';
             tooltip.style.left = (event.clientX + 15) + 'px';
             tooltip.style.top = (event.clientY + 15) + 'px';
+            
+            if (sticky) {
+                tooltip.classList.add('sticky');
+                stickyTooltip = true;
+                stickyObject = object;
+            } else {
+                tooltip.classList.remove('sticky');
+            }
         }
         
         function hideTooltip() {
+            if (!stickyTooltip) {
+                tooltip.style.display = 'none';
+            }
+        }
+        
+        function unstickTooltip() {
+            stickyTooltip = false;
+            stickyObject = null;
+            tooltip.classList.remove('sticky');
             tooltip.style.display = 'none';
         }
         
@@ -889,6 +984,7 @@
         };
         
         window.focusOnAP = focusOnAP;
+        window.unstickTooltip = unstickTooltip;
         
         // Start the application
         init();
