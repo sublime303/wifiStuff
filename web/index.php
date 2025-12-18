@@ -303,6 +303,7 @@
         <p>🖱️ Scroll to zoom</p>
         <p>🖱️ Hover over objects for details</p>
         <p>🖱️ Click on object to pin tooltip</p>
+        <p>🎥 Auto-rotate for cinematic view</p>
     </div>
     
     <div id="stats">
@@ -336,6 +337,7 @@
         <button onclick="toggleConnections()">🔗 Toggle Lines</button>
         <button onclick="toggleBroadcasts()" id="broadcast-toggle">📡 Show Broadcasts</button>
         <button onclick="toggleSSIDList()" id="ssid-list-toggle">📋 Hide SSID List</button>
+        <button onclick="toggleAutoRotate()" id="auto-rotate-toggle">🎥 Auto Rotate</button>
         <button onclick="resetCamera()">📷 Reset Camera</button>
     </div>
     
@@ -362,6 +364,8 @@
         let showConnections = true;
         let includeBroadcasts = false; // Default: hide broadcasts
         let showSSIDList = true; // Default: show SSID list
+        let autoRotate = false; // Default: no auto-rotation
+        let rotationAngle = 0;
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
         let tooltip = document.getElementById('tooltip');
@@ -912,6 +916,20 @@
         function animate() {
             requestAnimationFrame(animate);
             
+            // Auto-rotate camera if enabled
+            if (autoRotate) {
+                rotationAngle += 0.003; // Rotation speed
+                const radius = 60; // Distance from center
+                const height = 30; // Height of camera
+                
+                camera.position.x = Math.cos(rotationAngle) * radius;
+                camera.position.z = Math.sin(rotationAngle) * radius;
+                camera.position.y = height;
+                
+                // Look at center
+                controls.target.set(0, 0, 0);
+            }
+            
             controls.update();
             
             // Rotate objects slowly
@@ -980,6 +998,28 @@
             } else {
                 listPanel.classList.add('hidden');
                 btn.textContent = '📋 Show SSID List';
+            }
+        };
+        
+        window.toggleAutoRotate = function() {
+            autoRotate = !autoRotate;
+            const btn = document.getElementById('auto-rotate-toggle');
+            
+            if (autoRotate) {
+                btn.textContent = '⏸️ Stop Rotate';
+                btn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)';
+                
+                // Disable orbit controls when auto-rotating
+                controls.enabled = false;
+                
+                // Set initial rotation angle based on current camera position
+                rotationAngle = Math.atan2(camera.position.z, camera.position.x);
+            } else {
+                btn.textContent = '🎥 Auto Rotate';
+                btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                
+                // Re-enable orbit controls
+                controls.enabled = true;
             }
         };
         
