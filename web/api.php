@@ -7,6 +7,9 @@
 
 header('Content-Type: application/json');
 
+// Check if we should include broadcast connections
+$includeBroadcasts = isset($_GET['include_broadcasts']) && $_GET['include_broadcasts'] === 'true';
+
 $dbFile = __DIR__ . '/../wifi_captures.db';
 
 if (!file_exists($dbFile)) {
@@ -24,6 +27,8 @@ try {
     
     // Get unique access points (SSIDs/BSSIDs)
     $accessPoints = [];
+    $broadcastFilter = $includeBroadcasts ? "" : "AND bssid != 'ff:ff:ff:ff:ff:ff'";
+    
     $stmt = $db->query("
         SELECT 
             COALESCE(ssid, bssid) as identifier,
@@ -34,7 +39,8 @@ try {
             AVG(signal_strength) as avg_signal,
             MAX(timestamp) as last_seen
         FROM captures
-        WHERE (ssid IS NOT NULL AND ssid != '(broadcast)') OR bssid IS NOT NULL
+        WHERE ((ssid IS NOT NULL AND ssid != '(broadcast)') OR bssid IS NOT NULL)
+            $broadcastFilter
         GROUP BY COALESCE(ssid, bssid)
         ORDER BY capture_count DESC
     ");
@@ -68,6 +74,8 @@ try {
         $macAddress = $row['mac_address'];
         
         // Get connections for this client
+        $broadcastConnFilter = $includeBroadcasts ? "" : "AND bssid != 'ff:ff:ff:ff:ff:ff'";
+        
         $connStmt = $db->prepare("
             SELECT 
                 ssid,
@@ -79,6 +87,7 @@ try {
             WHERE mac_address = :mac
                 AND ((ssid IS NOT NULL AND ssid != '(broadcast)') OR bssid IS NOT NULL)
                 AND signal_strength IS NOT NULL
+                $broadcastConnFilter
             GROUP BY COALESCE(ssid, bssid)
             ORDER BY packet_count DESC
         ");

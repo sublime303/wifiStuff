@@ -86,6 +86,7 @@ server {
    - **Hover**: View device details
    - **Click "Refresh Data"**: Update with latest captures
    - **Click "Toggle Lines"**: Show/hide connection lines
+   - **Click "Show/Hide Broadcasts"**: Toggle broadcast probe requests (ff:ff:ff:ff:ff:ff)
    - **Click "Reset Camera"**: Return to default view
 
 ## Color Coding
@@ -98,6 +99,24 @@ server {
 - 🟢 **Green Line**: Strong signal (> -50 dBm)
 - 🟡 **Yellow Line**: Medium signal (-50 to -70 dBm)
 - 🔴 **Red Line**: Weak signal (< -70 dBm)
+
+## Broadcast Filtering
+
+By default, the visualization **hides broadcast probe requests** to show only real connections.
+
+### What are Broadcasts?
+- **BSSID**: `ff:ff:ff:ff:ff:ff` (all F's)
+- **SSID**: Often shows as `(broadcast)`
+- **Purpose**: Devices scanning for any available networks
+- **Not Real Connections**: These are probe requests, not actual connections to access points
+
+### Why Hide Them?
+- Reduces clutter in the visualization
+- Focuses on actual client-AP relationships
+- Makes the 3D space easier to interpret
+- Broadcasts don't represent real network topology
+
+Use the **"Show Broadcasts"** button to toggle them back on if you want to see all probe activity.
 
 ## How It Works
 

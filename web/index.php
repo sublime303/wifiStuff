@@ -176,6 +176,7 @@
         <p>🔵 <strong>Blue cubes</strong> = Client Devices</p>
         <p>Distance = RSSI signal strength</p>
         <p><small>Closer objects = stronger signal</small></p>
+        <p><small>⚠️ Broadcasts hidden by default</small></p>
         <hr style="margin: 10px 0; opacity: 0.3;">
         <p><strong>Controls:</strong></p>
         <p>🖱️ Left click + drag to rotate</p>
@@ -206,6 +207,7 @@
     <div id="controls">
         <button onclick="refreshData()">🔄 Refresh Data</button>
         <button onclick="toggleConnections()">🔗 Toggle Lines</button>
+        <button onclick="toggleBroadcasts()" id="broadcast-toggle">📡 Show Broadcasts</button>
         <button onclick="resetCamera()">📷 Reset Camera</button>
     </div>
     
@@ -230,6 +232,7 @@
         let clients = new Map();
         let connections = [];
         let showConnections = true;
+        let includeBroadcasts = false; // Default: hide broadcasts
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
         let tooltip = document.getElementById('tooltip');
@@ -397,7 +400,8 @@
         // Load data from the API
         async function loadData() {
             try {
-                const response = await fetch('api.php');
+                const url = `api.php?include_broadcasts=${includeBroadcasts}`;
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 if (data.error) {
@@ -608,6 +612,23 @@
             connections.forEach(conn => {
                 conn.visible = showConnections;
             });
+        };
+        
+        window.toggleBroadcasts = function() {
+            includeBroadcasts = !includeBroadcasts;
+            const btn = document.getElementById('broadcast-toggle');
+            
+            if (includeBroadcasts) {
+                btn.textContent = '📡 Hide Broadcasts';
+                btn.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)';
+            } else {
+                btn.textContent = '📡 Show Broadcasts';
+                btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+            
+            // Reload data with new filter
+            document.getElementById('loading').style.display = 'block';
+            loadData();
         };
         
         window.resetCamera = function() {
