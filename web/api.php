@@ -52,8 +52,38 @@ try {
             'manufacturer' => $row['bssid_manufacturer'] ?: null,
             'capture_count' => (int)$row['capture_count'],
             'avg_signal' => $row['avg_signal'] ? (int)$row['avg_signal'] : null,
-            'last_seen' => $row['last_seen']
+            'last_seen' => $row['last_seen'],
+            'clients' => [] // Will be populated below
         ];
+    }
+    
+    // Now populate clients for each access point
+    foreach ($accessPoints as &$ap) {
+        $identifier = $ap['ssid'] ?: $ap['bssid'];
+        
+        $clientStmt = $db->prepare("
+            SELECT DISTINCT
+                mac_address,
+                manufacturer,
+                AVG(signal_strength) as avg_rssi,
+                COUNT(*) as packet_count
+            FROM captures
+            WHERE (ssid = :identifier OR bssid = :identifier)
+                AND mac_address IS NOT NULL
+                AND signal_strength IS NOT NULL
+            GROUP BY mac_address
+            ORDER BY packet_count DESC
+        ");
+        $clientStmt->execute([':identifier' => $identifier]);
+        
+        while ($client = $clientStmt->fetch(PDO::FETCH_ASSOC)) {
+            $ap['clients'][] = [
+                'mac' => $client['mac_address'],
+                'manufacturer' => $client['manufacturer'] ?: null,
+                'avg_rssi' => $client['avg_rssi'] ? (int)$client['avg_rssi'] : null,
+                'packet_count' => (int)$client['packet_count']
+            ];
+        }
     }
     
     // Get clients with their connections

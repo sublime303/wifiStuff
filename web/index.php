@@ -61,6 +61,93 @@
             backdrop-filter: blur(10px);
         }
         
+        #ssid-list {
+            position: absolute;
+            top: 20px;
+            right: 250px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            max-height: 80vh;
+            overflow-y: auto;
+            min-width: 300px;
+            max-width: 400px;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        #ssid-list.hidden {
+            transform: translateX(450px);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        #ssid-list h3 {
+            margin: 0 0 10px 0;
+            color: #4fc3f7;
+            font-size: 16px;
+            border-bottom: 2px solid #4fc3f7;
+            padding-bottom: 5px;
+        }
+        
+        .ssid-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            border-left: 3px solid #00ff88;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .ssid-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(-3px);
+            border-left-color: #00ffcc;
+        }
+        
+        .ssid-name {
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 3px;
+        }
+        
+        .ssid-details {
+            font-size: 10px;
+            color: #aaa;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 3px;
+        }
+        
+        .ssid-bssid {
+            font-size: 10px;
+            color: #888;
+            font-family: monospace;
+        }
+        
+        /* Custom scrollbar */
+        #ssid-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #ssid-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        #ssid-list::-webkit-scrollbar-thumb {
+            background: #4fc3f7;
+            border-radius: 10px;
+        }
+        
+        #ssid-list::-webkit-scrollbar-thumb:hover {
+            background: #00ff88;
+        }
+        
         .stat-item {
             display: flex;
             justify-content: space-between;
@@ -204,10 +291,18 @@
         </div>
     </div>
     
+    <div id="ssid-list">
+        <h3>📡 Access Points</h3>
+        <div id="ssid-list-content">
+            <p style="color: #888; font-style: italic;">Loading...</p>
+        </div>
+    </div>
+    
     <div id="controls">
         <button onclick="refreshData()">🔄 Refresh Data</button>
         <button onclick="toggleConnections()">🔗 Toggle Lines</button>
         <button onclick="toggleBroadcasts()" id="broadcast-toggle">📡 Show Broadcasts</button>
+        <button onclick="toggleSSIDList()" id="ssid-list-toggle">📋 Hide SSID List</button>
         <button onclick="resetCamera()">📷 Reset Camera</button>
     </div>
     
@@ -233,6 +328,7 @@
         let connections = [];
         let showConnections = true;
         let includeBroadcasts = false; // Default: hide broadcasts
+        let showSSIDList = true; // Default: show SSID list
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
         let tooltip = document.getElementById('tooltip');
@@ -418,6 +514,10 @@
                 data.access_points.forEach(ap => {
                     const apObject = createAccessPoint(ap.ssid, ap.bssid);
                     
+                    // Store client list with the AP
+                    apObject.userData.clients = ap.clients || [];
+                    apObject.userData.manufacturer = ap.manufacturer;
+                    
                     // Position randomly but spread out
                     const angle = Math.random() * Math.PI * 2;
                     const radius = Math.random() * 20 + 10;
@@ -475,6 +575,9 @@
                 // Update stats
                 updateStats(data);
                 
+                // Update SSID list
+                updateSSIDList(data.access_points);
+                
                 // Hide loading
                 document.getElementById('loading').style.display = 'none';
                 
@@ -511,6 +614,121 @@
             
             const now = new Date();
             document.getElementById('last-update').textContent = now.toLocaleTimeString();
+        }
+        
+        function updateSSIDList(aps) {
+            const listContent = document.getElementById('ssid-list-content');
+            
+            if (aps.length === 0) {
+                listContent.innerHTML = '<p style="color: #888; font-style: italic;">No access points found</p>';
+                return;
+            }
+            
+            let html = '';
+            aps.forEach(ap => {
+                const ssid = ap.ssid || 'Hidden Network';
+                const bssid = ap.bssid || 'Unknown';
+                const clientCount = ap.clients ? ap.clients.length : 0;
+                const avgSignal = ap.avg_signal ? `${ap.avg_signal} dBm` : 'N/A';
+                const identifier = ap.ssid || ap.bssid;
+                
+                html += `
+                    <div class="ssid-item" onclick="focusOnAP('${identifier.replace(/'/g, "\\'")}')">
+                        <div class="ssid-name">${escapeHtml(ssid)}</div>
+                        <div class="ssid-bssid">${escapeHtml(bssid)}</div>
+                        <div class="ssid-details">
+                            <span>👥 ${clientCount} clients</span>
+                            <span>📶 ${avgSignal}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            listContent.innerHTML = html;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function focusOnAP(identifier) {
+            const ap = accessPoints.get(identifier);
+            if (!ap) return;
+            
+            // Animate camera to focus on the AP
+            const targetPos = ap.position;
+            const distance = 15;
+            
+            // Calculate camera position (offset from AP)
+            const cameraPos = new THREE.Vector3(
+                targetPos.x + distance,
+                targetPos.y + distance / 2,
+                targetPos.z + distance
+            );
+            
+            // Smooth animation
+            animateCamera(cameraPos, targetPos);
+            
+            // Highlight effect
+            highlightObject(ap);
+        }
+        
+        function animateCamera(targetPosition, lookAtPosition) {
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const duration = 1000; // ms
+            const startTime = Date.now();
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing function (ease-in-out)
+                const eased = progress < 0.5
+                    ? 2 * progress * progress
+                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                
+                camera.position.lerpVectors(startPos, targetPosition, eased);
+                controls.target.lerpVectors(startTarget, lookAtPosition, eased);
+                controls.update();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            
+            animate();
+        }
+        
+        function highlightObject(object) {
+            const originalEmissiveIntensity = object.material.emissiveIntensity;
+            const highlightIntensity = 2.0;
+            const duration = 1000;
+            const startTime = Date.now();
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = elapsed / duration;
+                
+                if (progress < 0.5) {
+                    // Pulse up
+                    object.material.emissiveIntensity = originalEmissiveIntensity + 
+                        (highlightIntensity - originalEmissiveIntensity) * (progress * 2);
+                } else if (progress < 1) {
+                    // Pulse down
+                    object.material.emissiveIntensity = highlightIntensity - 
+                        (highlightIntensity - originalEmissiveIntensity) * ((progress - 0.5) * 2);
+                } else {
+                    object.material.emissiveIntensity = originalEmissiveIntensity;
+                    return;
+                }
+                
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
         }
         
         function onWindowResize() {
@@ -551,6 +769,25 @@
                     SSID: ${userData.ssid || 'Hidden'}<br>
                     BSSID: ${userData.bssid || 'Unknown'}
                 `;
+                
+                if (userData.manufacturer) {
+                    content += `<br>Manufacturer: ${userData.manufacturer}`;
+                }
+                
+                if (userData.clients && userData.clients.length > 0) {
+                    content += `<br><br><strong>Clients connected: ${userData.clients.length}</strong><br>`;
+                    // Show up to 10 clients
+                    const displayClients = userData.clients.slice(0, 10);
+                    displayClients.forEach(client => {
+                        const mfg = client.manufacturer ? ` (${client.manufacturer})` : '';
+                        const rssi = client.avg_rssi ? ` ${client.avg_rssi} dBm` : '';
+                        content += `• ${client.mac}${mfg}${rssi}<br>`;
+                    });
+                    
+                    if (userData.clients.length > 10) {
+                        content += `<small>... and ${userData.clients.length - 10} more</small><br>`;
+                    }
+                }
             } else if (userData.type === 'client') {
                 content = `
                     <strong>📱 Client Device</strong><br>
@@ -636,6 +873,22 @@
             controls.target.set(0, 0, 0);
             controls.update();
         };
+        
+        window.toggleSSIDList = function() {
+            showSSIDList = !showSSIDList;
+            const listPanel = document.getElementById('ssid-list');
+            const btn = document.getElementById('ssid-list-toggle');
+            
+            if (showSSIDList) {
+                listPanel.classList.remove('hidden');
+                btn.textContent = '📋 Hide SSID List';
+            } else {
+                listPanel.classList.add('hidden');
+                btn.textContent = '📋 Show SSID List';
+            }
+        };
+        
+        window.focusOnAP = focusOnAP;
         
         // Start the application
         init();
