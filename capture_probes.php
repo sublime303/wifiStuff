@@ -84,10 +84,16 @@ while (!feof($fp)) {
     
     // Get best (strongest/least negative) RSSI value
     $rssi = "";
-    if (isset($f[5]) && $f[5]) {
+    $signalValue = null;
+    if (isset($f[5]) && trim($f[5]) !== '') {
         $rssiValues = array_map('intval', explode(',', $f[5]));
-        $bestRssi = max($rssiValues); // max because -45 > -80
-        $rssi = $bestRssi." dB";
+        // Filter out zero values (invalid/missing readings)
+        $rssiValues = array_filter($rssiValues, fn($v) => $v != 0);
+        if (!empty($rssiValues)) {
+            $bestRssi = max($rssiValues); // max because -45 > -80
+            $rssi = $bestRssi." dB";
+            $signalValue = $bestRssi;
+        }
     }
     
     // Show activity dot every 100 packets (if verbose enabled)

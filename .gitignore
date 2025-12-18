@@ -9,4 +9,5 @@ wifi_captures.db-shm
 # Backup files
 *.bak
 *.backup
+probes
 
