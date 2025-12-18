@@ -207,6 +207,31 @@
             background: #00ff88;
         }
         
+        .node-label {
+            color: white;
+            font-size: 11px;
+            font-family: 'Segoe UI', sans-serif;
+            padding: 3px 6px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 3px;
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+        }
+        
+        .node-label.ap-label {
+            border-color: rgba(0, 255, 136, 0.5);
+            color: #00ff88;
+        }
+        
+        .node-label.client-label {
+            border-color: rgba(79, 195, 247, 0.5);
+            color: #4fc3f7;
+        }
+        
         .stat-item {
             display: flex;
             justify-content: space-between;
@@ -363,6 +388,7 @@
         <p>🖱️ Hover over objects for details</p>
         <p>🖱️ Click on object to pin tooltip</p>
         <p>🎥 Auto-rotate for cinematic view</p>
+        <p>🏷️ Toggle labels for easy identification</p>
     </div>
     
     <div id="stats">
@@ -396,6 +422,7 @@
         <button onclick="toggleConnections()">🔗 Toggle Lines</button>
         <button onclick="toggleBroadcasts()" id="broadcast-toggle">📡 Show Broadcasts</button>
         <button onclick="toggleSSIDList()" id="ssid-list-toggle">📋 Hide SSID List</button>
+        <button onclick="toggleLabels()" id="labels-toggle">🏷️ Show Labels</button>
         <button onclick="toggleAutoRotate()" id="auto-rotate-toggle">🎥 Auto Rotate</button>
         <button onclick="resetCamera()">📷 Reset Camera</button>
     </div>
@@ -423,8 +450,10 @@
         let showConnections = true;
         let includeBroadcasts = false; // Default: hide broadcasts
         let showSSIDList = true; // Default: show SSID list
+        let showLabels = false; // Default: labels hidden
         let autoRotate = false; // Default: no auto-rotation
         let rotationAngle = 0;
+        let labelRenderer;
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
         let tooltip = document.getElementById('tooltip');
@@ -452,6 +481,14 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.getElementById('container').appendChild(renderer.domElement);
+            
+            // Label Renderer (CSS2D)
+            labelRenderer = new CSS2DRenderer();
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.domElement.style.position = 'absolute';
+            labelRenderer.domElement.style.top = '0';
+            labelRenderer.domElement.style.pointerEvents = 'none';
+            document.getElementById('container').appendChild(labelRenderer.domElement);
             
             // Controls
             controls = new OrbitControls(camera, renderer.domElement);
@@ -523,11 +560,21 @@
             const glow = new THREE.Mesh(glowGeometry, glowMaterial);
             sphere.add(glow);
             
+            // Create label (not as child, will be positioned separately)
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'node-label ap-label';
+            labelDiv.textContent = ssid || bssid || 'Unknown';
+            
+            const label = new CSS2DObject(labelDiv);
+            label.visible = showLabels; // Use Three.js visible property
+            scene.add(label); // Add to scene, not to sphere
+            
             sphere.userData = {
                 type: 'accessPoint',
                 ssid: ssid,
                 bssid: bssid,
-                clients: []
+                clients: [],
+                label: label
             };
             
             scene.add(sphere);
@@ -546,11 +593,21 @@
             });
             const cube = new THREE.Mesh(geometry, material);
             
+            // Create label (not as child, will be positioned separately)
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'node-label client-label';
+            labelDiv.textContent = manufacturer || mac.substring(0, 17); // Show manufacturer or truncated MAC
+            
+            const label = new CSS2DObject(labelDiv);
+            label.visible = showLabels; // Use Three.js visible property
+            scene.add(label); // Add to scene, not to cube
+            
             cube.userData = {
                 type: 'client',
                 mac: mac,
                 manufacturer: manufacturer,
-                connections: []
+                connections: [],
+                label: label
             };
             
             scene.add(cube);
@@ -688,12 +745,22 @@
         }
         
         function clearScene() {
-            // Remove all access points
-            accessPoints.forEach(ap => scene.remove(ap));
+            // Remove all access points and their labels
+            accessPoints.forEach(ap => {
+                if (ap.userData.label) {
+                    scene.remove(ap.userData.label);
+                }
+                scene.remove(ap);
+            });
             accessPoints.clear();
             
-            // Remove all clients
-            clients.forEach(client => scene.remove(client));
+            // Remove all clients and their labels
+            clients.forEach(client => {
+                if (client.userData.label) {
+                    scene.remove(client.userData.label);
+                }
+                scene.remove(client);
+            });
             clients.clear();
             
             // Remove all connections
@@ -906,6 +973,7 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
         }
         
         function onMouseMove(event) {
@@ -1063,14 +1131,32 @@
             
             controls.update();
             
-            // Rotate objects slowly
+            // Rotate objects slowly and update label positions
             accessPoints.forEach(ap => {
                 ap.rotation.y += 0.005;
+                
+                // Update label position to float above the object
+                if (ap.userData.label) {
+                    ap.userData.label.position.set(
+                        ap.position.x,
+                        ap.position.y + 3,
+                        ap.position.z
+                    );
+                }
             });
             
             clients.forEach(client => {
                 client.rotation.x += 0.01;
                 client.rotation.y += 0.01;
+                
+                // Update label position to float above the object
+                if (client.userData.label) {
+                    client.userData.label.position.set(
+                        client.position.x,
+                        client.position.y + 2,
+                        client.position.z
+                    );
+                }
             });
             
             // Update connection lines
@@ -1080,6 +1166,7 @@
             });
             
             renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
         }
         
         // Global functions for buttons
@@ -1153,6 +1240,33 @@
                 controls.enabled = true;
             }
         };
+        
+        function toggleLabels() {
+            showLabels = !showLabels;
+            const btn = document.getElementById('labels-toggle');
+            
+            if (showLabels) {
+                btn.textContent = '🏷️ Hide Labels';
+            } else {
+                btn.textContent = '🏷️ Show Labels';
+            }
+            
+            // Update all AP labels - use Three.js visible property
+            accessPoints.forEach(ap => {
+                if (ap.userData.label) {
+                    ap.userData.label.visible = showLabels;
+                }
+            });
+            
+            // Update all client labels - use Three.js visible property
+            clients.forEach(client => {
+                if (client.userData.label) {
+                    client.userData.label.visible = showLabels;
+                }
+            });
+        }
+        
+        window.toggleLabels = toggleLabels;
         
         window.focusOnAP = focusOnAP;
         window.focusOnClient = focusOnClient;
