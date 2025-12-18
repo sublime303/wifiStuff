@@ -123,6 +123,65 @@
             margin-top: 3px;
         }
         
+        .client-count {
+            cursor: pointer;
+            color: #4fc3f7;
+            transition: color 0.2s;
+        }
+        
+        .client-count:hover {
+            color: #00ffcc;
+            text-decoration: underline;
+        }
+        
+        .client-list {
+            display: none;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .client-list.expanded {
+            display: block;
+            max-height: 500px;
+        }
+        
+        .client-list-item {
+            padding: 5px;
+            margin: 3px 0;
+            background: rgba(79, 195, 247, 0.1);
+            border-radius: 3px;
+            border-left: 2px solid #4fc3f7;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s;
+        }
+        
+        .client-list-item:hover {
+            background: rgba(79, 195, 247, 0.2);
+            transform: translateX(3px);
+            border-left-color: #00ffcc;
+        }
+        
+        .client-mac {
+            font-family: monospace;
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+        
+        .client-mfg {
+            color: #888;
+            font-size: 9px;
+        }
+        
+        .client-rssi {
+            color: #00ff88;
+            font-size: 9px;
+        }
+        
         .ssid-bssid {
             font-size: 10px;
             color: #888;
@@ -665,20 +724,49 @@
             }
             
             let html = '';
-            aps.forEach(ap => {
+            aps.forEach((ap, index) => {
                 const ssid = ap.ssid || 'Hidden Network';
                 const bssid = ap.bssid || 'Unknown';
                 const clientCount = ap.clients ? ap.clients.length : 0;
                 const avgSignal = ap.avg_signal ? `${ap.avg_signal} dBm` : 'N/A';
                 const identifier = ap.ssid || ap.bssid;
+                const apId = `ap-${index}`;
                 
                 html += `
-                    <div class="ssid-item" onclick="focusOnAP('${identifier.replace(/'/g, "\\'")}')">
-                        <div class="ssid-name">${escapeHtml(ssid)}</div>
-                        <div class="ssid-bssid">${escapeHtml(bssid)}</div>
+                    <div class="ssid-item">
+                        <div onclick="focusOnAP('${identifier.replace(/'/g, "\\'")}')" style="cursor: pointer;">
+                            <div class="ssid-name">${escapeHtml(ssid)}</div>
+                            <div class="ssid-bssid">${escapeHtml(bssid)}</div>
+                        </div>
                         <div class="ssid-details">
-                            <span>👥 ${clientCount} clients</span>
+                            <span class="client-count" onclick="toggleClientList('${apId}', event)">👥 ${clientCount} client${clientCount !== 1 ? 's' : ''}</span>
                             <span>📶 ${avgSignal}</span>
+                        </div>
+                        <div class="client-list" id="${apId}">
+                `;
+                
+                // Add client list
+                if (ap.clients && ap.clients.length > 0) {
+                    ap.clients.forEach(client => {
+                        const mfg = client.manufacturer ? escapeHtml(client.manufacturer) : 'Unknown';
+                        const rssi = client.avg_rssi ? `${client.avg_rssi} dBm` : 'N/A';
+                        const mac = escapeHtml(client.mac);
+                        
+                        html += `
+                            <div class="client-list-item" onclick="focusOnClient('${mac.replace(/'/g, "\\'")}', event)">
+                                <div class="client-mac">${mac}</div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 2px;">
+                                    <span class="client-mfg">${mfg}</span>
+                                    <span class="client-rssi">${rssi}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<p style="color: #666; font-style: italic; font-size: 10px; padding: 5px;">No clients connected</p>';
+                }
+                
+                html += `
                         </div>
                     </div>
                 `;
@@ -697,6 +785,11 @@
             const ap = accessPoints.get(identifier);
             if (!ap) return;
             
+            // Stop auto-rotate if active
+            if (autoRotate) {
+                toggleAutoRotate();
+            }
+            
             // Animate camera to focus on the AP
             const targetPos = ap.position;
             const distance = 15;
@@ -713,6 +806,44 @@
             
             // Highlight effect
             highlightObject(ap);
+        }
+        
+        function focusOnClient(mac, event) {
+            if (event) event.stopPropagation();
+            
+            const client = clients.get(mac);
+            if (!client) return;
+            
+            // Stop auto-rotate if active
+            if (autoRotate) {
+                toggleAutoRotate();
+            }
+            
+            // Animate camera to focus on the client
+            const targetPos = client.position;
+            const distance = 15;
+            
+            // Calculate camera position (offset from client)
+            const cameraPos = new THREE.Vector3(
+                targetPos.x + distance,
+                targetPos.y + distance / 2,
+                targetPos.z + distance
+            );
+            
+            // Smooth animation
+            animateCamera(cameraPos, targetPos);
+            
+            // Highlight effect
+            highlightObject(client);
+        }
+        
+        function toggleClientList(apId, event) {
+            if (event) event.stopPropagation();
+            
+            const clientList = document.getElementById(apId);
+            if (!clientList) return;
+            
+            clientList.classList.toggle('expanded');
         }
         
         function animateCamera(targetPosition, lookAtPosition) {
@@ -1024,6 +1155,8 @@
         };
         
         window.focusOnAP = focusOnAP;
+        window.focusOnClient = focusOnClient;
+        window.toggleClientList = toggleClientList;
         window.unstickTooltip = unstickTooltip;
         
         // Start the application
